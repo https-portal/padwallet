@@ -10,10 +10,11 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-<style>
-  /* Google Fonts */
-  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+<!-- Tesseract.js for OCR -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
   body {
     display: flex;
@@ -23,7 +24,6 @@
     background: linear-gradient(135deg, #2563eb, #4bc7d8);
     color: #333;
   }
-
   .register-box {
     background: #fff;
     border-radius: 15px;
@@ -33,14 +33,12 @@
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     text-align: center;
   }
-
   .register-box h2 {
     color: #2563eb;
     margin-bottom: 25px;
     font-weight: 600;
     letter-spacing: 1px;
   }
-
   input {
     width: 100%;
     padding: 12px 15px;
@@ -50,13 +48,11 @@
     font-size: 14px;
     transition: all 0.3s ease;
   }
-
   input:focus {
     border-color: #2563eb;
     box-shadow: 0 0 5px rgba(37, 99, 235, 0.5);
     outline: none;
   }
-
   button {
     width: 100%;
     padding: 12px;
@@ -69,41 +65,29 @@
     transition: all 0.3s ease;
     font-size: 15px;
   }
-
   button:hover {
     background: #1e40af;
   }
-
-  p {
-    margin-top: 15px;
-    font-size: 14px;
-    color: #555;
-  }
-
-  a {
-    color: #2563eb;
-    text-decoration: none;
-    font-weight: 500;
-  }
-
-  a:hover {
-    text-decoration: underline;
-  }
-
-  @media (max-width: 400px) {
-    .register-box { padding: 30px 20px; }
-  }
+  p { margin-top: 15px; font-size: 14px; color: #555; }
+  a { color: #2563eb; text-decoration: none; font-weight: 500; }
+  a:hover { text-decoration: underline; }
+  @media (max-width: 400px) { .register-box { padding: 30px 20px; } }
 </style>
 </head>
 <body>
 
 <div class="register-box">
   <h2>PadWallet Registration</h2>
+
+  <!-- ID Number with Scan -->
   <input type="text" id="idNumber" placeholder="ID Number" />
+  <input type="file" accept="image/*" capture="environment" id="idCapture" />
+  <button type="button" onclick="scanID()">Scan ID</button>
+
   <input type="text" id="fullname" placeholder="Fullname" />
   <input type="email" id="email" placeholder="Email" />
-    
   <input type="password" id="password" placeholder="Password" />
+
   <button onclick="registerUser()">Register</button>
   <p>
     Already have an account? <a href="index.html">Login here</a>
@@ -126,11 +110,29 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
+// OCR Function to scan ID
+function scanID() {
+  const fileInput = document.getElementById("idCapture");
+  if (!fileInput.files.length) return alert("Please take a photo of your ID!");
+
+  const file = fileInput.files[0];
+  Tesseract.recognize(file, 'eng', { logger: m => console.log(m) })
+    .then(({ data: { text } }) => {
+      const idText = text.replace(/\s/g, '').trim(); 
+      document.getElementById("idNumber").value = idText;
+      alert("ID Number captured: " + idText);
+    })
+    .catch(err => {
+      alert("Error scanning ID: " + err);
+    });
+}
+
+// Firebase Registration
 function registerUser() {
   const idNumber = document.getElementById("idNumber").value.trim();
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
-  const fullname=document.getElementById("fullname").value;
+  const fullname = document.getElementById("fullname").value.trim();
 
   if (!idNumber || !email || !password || !fullname) {
     alert("All fields are required!");
@@ -148,11 +150,11 @@ function registerUser() {
             db.ref('users/' + user.uid).set({
               idNumber: idNumber,
               email: email,
-              fullname:fullname,
+              fullname: fullname,
               role: "user"
             });
             alert("Registration successful!");
-            window.location.href = "index.html"; // Redirect to login after registration
+            window.location.href = "index.html";
           })
           .catch(error => {
             alert("Error: " + error.message);
