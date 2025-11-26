@@ -99,8 +99,10 @@ tr:nth-child(even) { background-color: #f9fafb; }
     <thead>
       <tr>
         <th>ID Number</th>
+        <th> Name</th>
         <th>Email</th>
         <th>Wallet Balance (₱)</th>
+        
       </tr>
     </thead>
     <tbody id="usersTable"></tbody>
@@ -160,6 +162,7 @@ const dashboard = document.querySelector(".dashboard");
 let currentAdminUid = null;
 let currentAdminEmail = "";
 
+
 // Check Firebase auth
 auth.onAuthStateChanged(user => {
   if (user) {
@@ -193,6 +196,7 @@ function loadUsers() {
         usersTable.innerHTML += `
           <tr>
             <td data-label="ID Number">${user.idNumber}</td>
+            <td data-label="Full Name">${user.fullname}</td>
             <td data-label="Email">${user.email}</td>
             <td data-label="Wallet Balance">₱${parseFloat(user.wallet || 0).toFixed(2)}</td>
           </tr>
@@ -242,6 +246,9 @@ function confirmAddWallet() {
     .then(snapshot => {
       if (!snapshot.exists()) { alert("User not found!"); return; }
       const uid = Object.keys(snapshot.val())[0];
+      const user = snapshot.val()[uid]; // ✅ get user object to access fullname
+      const fullname = user.fullname || "N/A"; // fallback if undefined
+
       db.ref('users/' + uid + '/wallet').transaction(currentBalance => (parseFloat(currentBalance||0) + amount), 
       (error, committed, snap) => {
         if (error) alert("Error: " + error.message);
@@ -251,6 +258,7 @@ function confirmAddWallet() {
           closeWalletModal();
           loadUsers();
           db.ref('transactions').push({
+            name: fullname, // ✅ now defined
             userId: idNumber,
             amount: amount,
             balanceAfter: newBalance,
@@ -262,6 +270,7 @@ function confirmAddWallet() {
       });
     });
 }
+
 
 // Change Password Modal
 function openPassModal() { document.getElementById("passModal").style.display = "block"; }
