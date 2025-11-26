@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PadWallet Registration</title>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<style>
+  /* Google Fonts */
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #2563eb, #4bc7d8);
+    color: #333;
+  }
+
+  .register-box {
+    background: #fff;
+    border-radius: 15px;
+    padding: 40px 30px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+
+  .register-box h2 {
+    color: #2563eb;
+    margin-bottom: 25px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  input {
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    transition: all 0.3s ease;
+  }
+
+  input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 5px rgba(37, 99, 235, 0.5);
+    outline: none;
+  }
+
+  button {
+    width: 100%;
+    padding: 12px;
+    background: #2563eb;
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 15px;
+  }
+
+  button:hover {
+    background: #1e40af;
+  }
+
+  p {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #555;
+  }
+
+  a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 400px) {
+    .register-box { padding: 30px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="register-box">
+  <h2>PadWallet Registration</h2>
+  <input type="text" id="idNumber" placeholder="ID Number" />
+  <input type="text" id="fullname" placeholder="Fullname" />
+  <input type="email" id="email" placeholder="Email" />
+    
+  <input type="password" id="password" placeholder="Password" />
+  <button onclick="registerUser()">Register</button>
+  <p>
+    Already have an account? <a href="index.html">Login here</a>
+  </p>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCH_QogdKm5ugxqfUXiCKOH1UussXEn5r4",
+  authDomain: "vendo-6c9d5.firebaseapp.com",
+  projectId: "vendo-6c9d5",
+  storageBucket: "vendo-6c9d5.firebasestorage.app",
+  messagingSenderId: "424395684072",
+  appId: "1:424395684072:web:b7b757d56f416c1864b15d",
+  measurementId: "G-GQPV7Y72LH",
+  databaseURL: "https://vendo-6c9d5-default-rtdb.firebaseio.com/"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+function registerUser() {
+  const idNumber = document.getElementById("idNumber").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const fullname=document.getElementById("fullname").value;
+
+  if (!idNumber || !email || !password || !fullname) {
+    alert("All fields are required!");
+    return;
+  }
+
+  db.ref('users').orderByChild('idNumber').equalTo(idNumber).once('value')
+    .then(snapshot => {
+      if (snapshot.exists()) {
+        alert("This ID Number is already registered!");
+      } else {
+        auth.createUserWithEmailAndPassword(email, password)
+          .then(userCredential => {
+            const user = userCredential.user;
+            db.ref('users/' + user.uid).set({
+              idNumber: idNumber,
+              email: email,
+              fullname:fullname,
+              role: "user"
+            });
+            alert("Registration successful!");
+            window.location.href = "index.html"; // Redirect to login after registration
+          })
+          .catch(error => {
+            alert("Error: " + error.message);
+          });
+      }
+    })
+    .catch(error => {
+      alert("Error checking ID: " + error.message);
+    });
+}
+</script>
+
+</body>
+</html>
