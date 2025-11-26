@@ -14,64 +14,63 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-  body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background: linear-gradient(135deg, #2563eb, #4bc7d8);
-    color: #333;
-  }
-  .register-box {
-    background: #fff;
-    border-radius: 15px;
-    padding: 40px 30px;
-    width: 100%;
-    max-width: 360px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    text-align: center;
-  }
-  .register-box h2 {
-    color: #2563eb;
-    margin-bottom: 25px;
-    font-weight: 600;
-    letter-spacing: 1px;
-  }
-  input {
-    width: 100%;
-    padding: 12px 15px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-    transition: all 0.3s ease;
-  }
-  input:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 5px rgba(37, 99, 235, 0.5);
-    outline: none;
-  }
-  button {
-    width: 100%;
-    padding: 12px;
-    background: #2563eb;
-    color: #fff;
-    font-weight: 600;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 15px;
-  }
-  button:hover {
-    background: #1e40af;
-  }
-  p { margin-top: 15px; font-size: 14px; color: #555; }
-  a { color: #2563eb; text-decoration: none; font-weight: 500; }
-  a:hover { text-decoration: underline; }
-  @media (max-width: 400px) { .register-box { padding: 30px 20px; } }
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #2563eb, #4bc7d8);
+  color: #333;
+}
+.register-box {
+  background: #fff;
+  border-radius: 15px;
+  padding: 40px 30px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  text-align: center;
+}
+.register-box h2 { color: #2563eb; margin-bottom: 25px; font-weight: 600; letter-spacing: 1px; }
+input {
+  width: 100%;
+  padding: 12px 15px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 5px rgba(37, 99, 235, 0.5);
+  outline: none;
+}
+button {
+  width: 100%;
+  padding: 12px;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 15px;
+}
+button:hover { background: #1e40af; }
+p { margin-top: 15px; font-size: 14px; color: #555; }
+a { color: #2563eb; text-decoration: none; font-weight: 500; }
+a:hover { text-decoration: underline; }
+#scannerStatus {
+  margin-bottom: 15px;
+  font-size: 14px;
+  color: #2563eb;
+  font-weight: 500;
+}
+@media (max-width: 400px) { .register-box { padding: 30px 20px; } }
 </style>
 </head>
 <body>
@@ -79,10 +78,10 @@
 <div class="register-box">
   <h2>PadWallet Registration</h2>
 
-  <!-- ID Number with Scan -->
   <input type="text" id="idNumber" placeholder="ID Number" />
   <input type="file" accept="image/*" capture="environment" id="idCapture" />
   <button type="button" onclick="scanID()">Scan ID</button>
+  <div id="scannerStatus"></div>
 
   <input type="text" id="fullname" placeholder="Fullname" />
   <input type="email" id="email" placeholder="Email" />
@@ -110,19 +109,24 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-// OCR Function to scan ID
+// OCR Function with scanning indicator
 function scanID() {
   const fileInput = document.getElementById("idCapture");
+  const status = document.getElementById("scannerStatus");
+  
   if (!fileInput.files.length) return alert("Please take a photo of your ID!");
-
+  
   const file = fileInput.files[0];
+  status.innerText = "Scanning ID number... ⏳";
+
   Tesseract.recognize(file, 'eng', { logger: m => console.log(m) })
     .then(({ data: { text } }) => {
-      const idText = text.replace(/\s/g, '').trim(); 
+      const idText = text.replace(/\s/g, '').trim();
       document.getElementById("idNumber").value = idText;
-      alert("ID Number captured: " + idText);
+      status.innerText = "ID number captured ✅";
     })
     .catch(err => {
+      status.innerText = "";
       alert("Error scanning ID: " + err);
     });
 }
