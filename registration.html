@@ -10,13 +10,26 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
+
 <!-- Tesseract.js for OCR -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<!-- Cropper.js CSS & JS -->
+<link  href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-body {
+body 
+
+
+
+
+
+
+
+{
   display: flex;
   justify-content: center;
   align-items: center;
@@ -24,6 +37,11 @@ body {
   background: linear-gradient(135deg, #2563eb, #4bc7d8);
   color: #333;
 }
+
+
+
+
+
 .register-box {
   background: #fff;
   border-radius: 15px;
@@ -33,6 +51,12 @@ body {
   box-shadow: 0 10px 25px rgba(0,0,0,0.1);
   text-align: center;
 }
+
+
+
+
+
+
 .register-box h2 { color: #2563eb; margin-bottom: 25px; font-weight: 600; letter-spacing: 1px; }
 input {
   width: 100%;
@@ -75,6 +99,18 @@ a:hover { text-decoration: underline; }
 </head>
 <body>
 
+<!-- Cropper Modal -->
+<div id="cropperModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:1000;">
+  <div style="background:#fff; padding:20px; border-radius:10px; max-width:90%; max-height:90%; text-align:center;">
+    <h3>Crop your ID</h3>
+    <img id="cropperImage" style="max-width:100%; max-height:60vh; display:block; margin:auto;" />
+    <button id="cropBtn" style="margin-top:15px; padding:10px 20px; background:#2563eb; color:#fff; border:none; border-radius:5px; cursor:pointer;">Crop</button>
+  </div>
+</div>
+
+
+
+
 <div class="register-box">
   <h2>PadWallet Registration</h2>
 
@@ -112,6 +148,8 @@ const db = firebase.database();
 // OCR Function with scanning indicator
 // OCR Function with improved ID + Name reading
 // OCR Function with improved ID + Name reading
+let cropper;
+
 function scanID() {
   const fileInput = document.getElementById("idCapture");
   const status = document.getElementById("scannerStatus");
@@ -119,71 +157,63 @@ function scanID() {
   if (!fileInput.files.length) return alert("Please take a photo of your ID!");
 
   const file = fileInput.files[0];
-  status.innerText = "Scanning ID... ⏳";
+  const url = URL.createObjectURL(file);
 
-  Tesseract.recognize(file, 'eng', {
-    logger: m => {
-      if (m.status === 'recognizing text') {
-        status.innerText = `Scanning: ${Math.round(m.progress * 100)}% ⏳`;
-      }
-    }
-  })
-  .then(({ data: { text } }) => {
+  // Show Cropper modal
+  const modal = document.getElementById("cropperModal");
+  const image = document.getElementById("cropperImage");
+  modal.style.display = "flex";
+  image.src = url;
 
-    console.log("RAW OCR OUTPUT:", text);
-
-    // ================================
-    // 🟦 CLEAN TEXT
-    // ================================
-    const cleanText = text.replace(/\s+/g, " ").trim();
-
-    // ================================
-    // 🟩 1️⃣ Extract UC ID Number (7–8 digits)
-    // ================================
-    const idMatch = cleanText.match(/\b(20\d{6}|2\d{7})\b/);
-
-    document.getElementById("idNumber").value = idMatch ? idMatch[0] : "";
-
-    // ================================
-    // 🟨 2️⃣ Extract Full Name
-    // ================================
-    const lines = text
-      .split("\n")
-      .map(l => l.trim())
-      .filter(l => l.length > 0);
-
-    let fullName = "";
-
-    // Ignore NON-NAME words
-    const skipWords = /University|Cebu|High|School|Signature|Name|Senior|ID|Sanciangko|Philippines/i;
-
-    // Pattern for UC-style names
-    const namePattern = /^[A-Z][a-z]+(?: [A-Z][a-z]+){1,3}$/;
-
-    for (let line of lines) {
-      if (skipWords.test(line)) continue;
-      if (namePattern.test(line)) {
-        fullName = line;
-        break;
-      }
-    }
-
-    // Fix capitalization ("MargaEUX" → "Margaeux")
-    if (fullName) {
-      fullName = fullName
-        .toLowerCase()
-        .replace(/\b\w/g, c => c.toUpperCase());
-    }
-
-    document.getElementById("fullname").value = fullName;
-
-    status.innerText = "ID scanned successfully ✅";
-  })
-  .catch(err => {
-    status.innerText = "";
-    alert("Error scanning ID: " + err);
+  // Destroy previous cropper instance if exists
+  if (cropper) cropper.destroy();
+  cropper = new Cropper(image, {
+    aspectRatio: 4/3, // Adjust as needed
+    viewMode: 1,
+    autoCropArea: 1,
   });
+
+  // Crop button
+  document.getElementById("cropBtn").onclick = function() {
+    const canvas = cropper.getCroppedCanvas();
+    canvas.toBlob(blob => {
+      modal.style.display = "none";
+      status.innerText = "Scanning ID... ⏳";
+
+      Tesseract.recognize(blob, 'eng', {
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            status.innerText = `Scanning: ${Math.round(m.progress * 100)}% ⏳`;
+          }
+        }
+      }).then(({ data: { text } }) => {
+        console.log("RAW OCR OUTPUT:", text);
+
+        const cleanText = text.replace(/\s+/g, " ").trim();
+        const idMatch = cleanText.match(/\b(20\d{6}|2\d{7})\b/);
+        document.getElementById("idNumber").value = idMatch ? idMatch[0] : "";
+
+        const lines = text.split("\n").map(l => l.trim()).filter(l => l.length>0).map(l => l.replace(/[^a-zA-Z ]/g, ""));
+        let fullName = "";
+        const skipWords = /University|Cebu|High|School|Signature|Name|Senior|ID|Sanciangko|Philippines/i;
+        const namePattern = /^[A-Za-z]{2,}(?: [A-Za-z]{2,}){0,3}$/;
+        for (let line of lines) {
+          if (skipWords.test(line)) continue;
+          if (namePattern.test(line)) { fullName = line; break; }
+        }
+        if (fullName) fullName = fullName.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+        document.getElementById("fullname").value = fullName;
+
+        status.innerText = "ID scanned successfully ✅";
+      }).catch(err => {
+        status.innerText = "";
+        alert("Error scanning ID: " + err);
+      });
+
+    }, 'image/jpeg');
+  };
 }
+
 
 
 // Firebase Registration
