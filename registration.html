@@ -111,6 +111,7 @@ const db = firebase.database();
 
 // OCR Function with scanning indicator
 // OCR Function with improved ID + Name reading
+// OCR Function with improved ID + Name reading
 function scanID() {
   const fileInput = document.getElementById("idCapture");
   const status = document.getElementById("scannerStatus");
@@ -129,39 +130,51 @@ function scanID() {
   })
   .then(({ data: { text } }) => {
 
-    // -----------------------------
-    // 1️⃣ Extract ID Number
-    // -----------------------------
-    const idMatch = text.match(/\b\d{6,10}\b/); // UC ID is 7-8 digits
+    console.log("RAW OCR OUTPUT:", text);
+
+    // ================================
+    // 🟦 CLEAN TEXT
+    // ================================
+    const cleanText = text.replace(/\s+/g, " ").trim();
+
+    // ================================
+    // 🟩 1️⃣ Extract UC ID Number (7–8 digits)
+    // ================================
+    const idMatch = cleanText.match(/\b(20\d{6}|2\d{7})\b/);
+
     document.getElementById("idNumber").value = idMatch ? idMatch[0] : "";
 
-    // -----------------------------
-    // 2️⃣ Extract NAME more accurately
-    // -----------------------------
-
-    const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    // ================================
+    // 🟨 2️⃣ Extract Full Name
+    // ================================
+    const lines = text
+      .split("\n")
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
 
     let fullName = "";
 
-    // Pattern for names like:
-    // Margaeux Alyssa Sususco
-    // Juan Dela Cruz
-    // Ava Marie Santos
-    const namePattern = /^[A-Z][a-z]+(?:\s[A-Z][a-z]+){1,3}$/;
+    // Ignore NON-NAME words
+    const skipWords = /University|Cebu|High|School|Signature|Name|Senior|ID|Sanciangko|Philippines/i;
+
+    // Pattern for UC-style names
+    const namePattern = /^[A-Z][a-z]+(?: [A-Z][a-z]+){1,3}$/;
 
     for (let line of lines) {
-
-      // Remove unwanted keywords
-      if (/University|Cebu|High|School|Signature|Name|Senior/i.test(line)) continue;
-
-      // If line matches name format
+      if (skipWords.test(line)) continue;
       if (namePattern.test(line)) {
         fullName = line;
         break;
       }
     }
 
-    // Set result
+    // Fix capitalization ("MargaEUX" → "Margaeux")
+    if (fullName) {
+      fullName = fullName
+        .toLowerCase()
+        .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
     document.getElementById("fullname").value = fullName;
 
     status.innerText = "ID scanned successfully ✅";
