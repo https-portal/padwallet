@@ -110,6 +110,7 @@ const auth = firebase.auth();
 const db = firebase.database();
 
 // OCR Function with scanning indicator
+// OCR Function with improved ID + Name reading
 function scanID() {
   const fileInput = document.getElementById("idCapture");
   const status = document.getElementById("scannerStatus");
@@ -128,27 +129,39 @@ function scanID() {
   })
   .then(({ data: { text } }) => {
 
-    // Extract ID number (numbers only)
-    const idOnly = text.replace(/\D/g, '').trim();
-    document.getElementById("idNumber").value = idOnly;
+    // -----------------------------
+    // 1️⃣ Extract ID Number
+    // -----------------------------
+    const idMatch = text.match(/\b\d{6,10}\b/); // UC ID is 7-8 digits
+    document.getElementById("idNumber").value = idMatch ? idMatch[0] : "";
 
-    // Split text into lines
-    const lines = text.split("\n");
+    // -----------------------------
+    // 2️⃣ Extract NAME more accurately
+    // -----------------------------
+
+    const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+
     let fullName = "";
 
-    // Detect capitalized name formats (Firstname Lastname)
-    const namePattern = /^[A-Z][a-z]+(\s[A-Z][a-z]+)+$/;
+    // Pattern for names like:
+    // Margaeux Alyssa Sususco
+    // Juan Dela Cruz
+    // Ava Marie Santos
+    const namePattern = /^[A-Z][a-z]+(?:\s[A-Z][a-z]+){1,3}$/;
 
     for (let line of lines) {
-      const cleaned = line.trim();
 
-      // If line looks like "Juan Dela Cruz"
-      if (namePattern.test(cleaned)) {
-        fullName = cleaned;
+      // Remove unwanted keywords
+      if (/University|Cebu|High|School|Signature|Name|Senior/i.test(line)) continue;
+
+      // If line matches name format
+      if (namePattern.test(line)) {
+        fullName = line;
         break;
       }
     }
 
+    // Set result
     document.getElementById("fullname").value = fullName;
 
     status.innerText = "ID scanned successfully ✅";
