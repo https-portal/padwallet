@@ -10,26 +10,19 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-
 <!-- Tesseract.js for OCR -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-<!-- Cropper.js CSS & JS -->
-<link  href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
+<!-- Cropper.js CSS & JS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-body 
 
-
-
-
-
-
-
-{
+body {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -38,10 +31,7 @@ body
   color: #333;
 }
 
-
-
-
-
+/* Registration Box */
 .register-box {
   background: #fff;
   border-radius: 15px;
@@ -52,12 +42,8 @@ body
   text-align: center;
 }
 
-
-
-
-
-
 .register-box h2 { color: #2563eb; margin-bottom: 25px; font-weight: 600; letter-spacing: 1px; }
+
 input {
   width: 100%;
   padding: 12px 15px;
@@ -67,11 +53,13 @@ input {
   font-size: 14px;
   transition: all 0.3s ease;
 }
+
 input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 5px rgba(37, 99, 235, 0.5);
   outline: none;
 }
+
 button {
   width: 100%;
   padding: 12px;
@@ -84,33 +72,78 @@ button {
   transition: all 0.3s ease;
   font-size: 15px;
 }
+
 button:hover { background: #1e40af; }
+
 p { margin-top: 15px; font-size: 14px; color: #555; }
 a { color: #2563eb; text-decoration: none; font-weight: 500; }
 a:hover { text-decoration: underline; }
+
 #scannerStatus {
   margin-bottom: 15px;
   font-size: 14px;
   color: #2563eb;
   font-weight: 500;
 }
-@media (max-width: 400px) { .register-box { padding: 30px 20px; } }
+
+/* Cropper Modal */
+#cropperModal {
+  display: none;
+  position: fixed;
+  top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,0.85);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  overflow: auto;
+}
+
+#cropperModal > div {
+  background:#fff;
+  padding:20px;
+  border-radius:10px;
+  max-width: 90%;
+  max-height: 90%;
+  text-align: center;
+  overflow: auto;
+}
+
+#cropperImage {
+  max-width: 100%;
+  max-height: 60vh;
+  display: block;
+  margin: auto;
+  touch-action: none; /* Important for mobile touch gestures */
+}
+
+#cropBtn {
+  margin-top:15px;
+  padding: 12px 20px;
+  background:#2563eb;
+  color:#fff;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
+  font-size:16px;
+}
+
+@media (max-width: 400px) {
+  .register-box { padding: 30px 20px; }
+}
 </style>
 </head>
 <body>
 
 <!-- Cropper Modal -->
-<div id="cropperModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:1000;">
-  <div style="background:#fff; padding:20px; border-radius:10px; max-width:90%; max-height:90%; text-align:center;">
+<div id="cropperModal">
+  <div>
     <h3>Crop your ID</h3>
-    <img id="cropperImage" style="max-width:100%; max-height:60vh; display:block; margin:auto;" />
-    <button id="cropBtn" style="margin-top:15px; padding:10px 20px; background:#2563eb; color:#fff; border:none; border-radius:5px; cursor:pointer;">Crop</button>
+    <img id="cropperImage" />
+    <button id="cropBtn">Crop & Scan</button>
   </div>
 </div>
 
-
-
-
+<!-- Registration Box -->
 <div class="register-box">
   <h2>PadWallet Registration</h2>
 
@@ -124,9 +157,7 @@ a:hover { text-decoration: underline; }
   <input type="password" id="password" placeholder="Password" />
 
   <button onclick="registerUser()">Register</button>
-  <p>
-    Already have an account? <a href="index.html">Login here</a>
-  </p>
+  <p>Already have an account? <a href="index.html">Login here</a></p>
 </div>
 
 <script>
@@ -140,14 +171,10 @@ const firebaseConfig = {
   measurementId: "G-GQPV7Y72LH",
   databaseURL: "https://vendo-6c9d5-default-rtdb.firebaseio.com/"
 };
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-// OCR Function with scanning indicator
-// OCR Function with improved ID + Name reading
-// OCR Function with improved ID + Name reading
 let cropper;
 
 function scanID() {
@@ -159,23 +186,29 @@ function scanID() {
   const file = fileInput.files[0];
   const url = URL.createObjectURL(file);
 
-  // Show Cropper modal
+  // Show modal
   const modal = document.getElementById("cropperModal");
   const image = document.getElementById("cropperImage");
   modal.style.display = "flex";
   image.src = url;
 
-  // Destroy previous cropper instance if exists
+  // Destroy previous cropper
   if (cropper) cropper.destroy();
   cropper = new Cropper(image, {
-    aspectRatio: 4/3, // Adjust as needed
+    aspectRatio: 4/3,
     viewMode: 1,
     autoCropArea: 1,
+    responsive: true,
+    background: false,
+    movable: true,
+    zoomable: true,
+    rotatable: false,
+    scalable: false,
   });
 
-  // Crop button
+  // Crop & OCR
   document.getElementById("cropBtn").onclick = function() {
-    const canvas = cropper.getCroppedCanvas();
+    const canvas = cropper.getCroppedCanvas({ width: 1000 }); // resize for faster OCR
     canvas.toBlob(blob => {
       modal.style.display = "none";
       status.innerText = "Scanning ID... ⏳";
@@ -183,38 +216,35 @@ function scanID() {
       Tesseract.recognize(blob, 'eng', {
         logger: m => {
           if (m.status === 'recognizing text') {
-            status.innerText = `Scanning: ${Math.round(m.progress * 100)}% ⏳`;
+            status.innerText = `Scanning: ${Math.round(m.progress*100)}% ⏳`;
           }
         }
       }).then(({ data: { text } }) => {
-        console.log("RAW OCR OUTPUT:", text);
+        console.log("OCR Output:", text);
 
         const cleanText = text.replace(/\s+/g, " ").trim();
         const idMatch = cleanText.match(/\b(20\d{6}|2\d{7})\b/);
         document.getElementById("idNumber").value = idMatch ? idMatch[0] : "";
 
-        const lines = text.split("\n").map(l => l.trim()).filter(l => l.length>0).map(l => l.replace(/[^a-zA-Z ]/g, ""));
+        const lines = text.split("\n").map(l => l.trim()).filter(l => l.length>0).map(l => l.replace(/[^a-zA-Z ]/g,""));
         let fullName = "";
         const skipWords = /University|Cebu|High|School|Signature|Name|Senior|ID|Sanciangko|Philippines/i;
         const namePattern = /^[A-Za-z]{2,}(?: [A-Za-z]{2,}){0,3}$/;
-        for (let line of lines) {
-          if (skipWords.test(line)) continue;
-          if (namePattern.test(line)) { fullName = line; break; }
+        for(let line of lines){
+          if(skipWords.test(line)) continue;
+          if(namePattern.test(line)){ fullName = line; break; }
         }
-        if (fullName) fullName = fullName.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+        if(fullName) fullName = fullName.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
         document.getElementById("fullname").value = fullName;
 
         status.innerText = "ID scanned successfully ✅";
       }).catch(err => {
         status.innerText = "";
-        alert("Error scanning ID: " + err);
+        alert("Error scanning ID: "+err);
       });
-
     }, 'image/jpeg');
   };
 }
-
-
 
 // Firebase Registration
 function registerUser() {
@@ -223,36 +253,29 @@ function registerUser() {
   const password = document.getElementById("password").value;
   const fullname = document.getElementById("fullname").value.trim();
 
-  if (!idNumber || !email || !password || !fullname) {
+  if(!idNumber||!email||!password||!fullname){
     alert("All fields are required!");
     return;
   }
 
   db.ref('users').orderByChild('idNumber').equalTo(idNumber).once('value')
     .then(snapshot => {
-      if (snapshot.exists()) {
+      if(snapshot.exists()){
         alert("This ID Number is already registered!");
       } else {
-        auth.createUserWithEmailAndPassword(email, password)
+        auth.createUserWithEmailAndPassword(email,password)
           .then(userCredential => {
             const user = userCredential.user;
             db.ref('users/' + user.uid).set({
-              idNumber: idNumber,
-              email: email,
-              fullname: fullname,
-              role: "user"
+              idNumber, email, fullname, role: "user"
             });
             alert("Registration successful!");
             window.location.href = "index.html";
           })
-          .catch(error => {
-            alert("Error: " + error.message);
-          });
+          .catch(err => alert("Error: "+err.message));
       }
     })
-    .catch(error => {
-      alert("Error checking ID: " + error.message);
-    });
+    .catch(err => alert("Error checking ID: "+err.message));
 }
 </script>
 
