@@ -113,23 +113,52 @@ const db = firebase.database();
 function scanID() {
   const fileInput = document.getElementById("idCapture");
   const status = document.getElementById("scannerStatus");
-  
-  if (!fileInput.files.length) return alert("Please take a photo of your ID!");
-  
-  const file = fileInput.files[0];
-  status.innerText = "Scanning ID number... ⏳";
 
-  Tesseract.recognize(file, 'eng', { logger: m => console.log(m) })
-    .then(({ data: { text } }) => {
-      const idText = text.replace(/\s/g, '').trim();
-      document.getElementById("idNumber").value = idText;
-      status.innerText = "ID number captured ✅";
-    })
-    .catch(err => {
-      status.innerText = "";
-      alert("Error scanning ID: " + err);
-    });
+  if (!fileInput.files.length) return alert("Please take a photo of your ID!");
+
+  const file = fileInput.files[0];
+  status.innerText = "Scanning ID... ⏳";
+
+  Tesseract.recognize(file, 'eng', {
+    logger: m => {
+      if (m.status === 'recognizing text') {
+        status.innerText = `Scanning: ${Math.round(m.progress * 100)}% ⏳`;
+      }
+    }
+  })
+  .then(({ data: { text } }) => {
+
+    // Extract ID number (numbers only)
+    const idOnly = text.replace(/\D/g, '').trim();
+    document.getElementById("idNumber").value = idOnly;
+
+    // Split text into lines
+    const lines = text.split("\n");
+    let fullName = "";
+
+    // Detect capitalized name formats (Firstname Lastname)
+    const namePattern = /^[A-Z][a-z]+(\s[A-Z][a-z]+)+$/;
+
+    for (let line of lines) {
+      const cleaned = line.trim();
+
+      // If line looks like "Juan Dela Cruz"
+      if (namePattern.test(cleaned)) {
+        fullName = cleaned;
+        break;
+      }
+    }
+
+    document.getElementById("fullname").value = fullName;
+
+    status.innerText = "ID scanned successfully ✅";
+  })
+  .catch(err => {
+    status.innerText = "";
+    alert("Error scanning ID: " + err);
+  });
 }
+
 
 // Firebase Registration
 function registerUser() {
