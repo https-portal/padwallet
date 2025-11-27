@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
@@ -102,7 +103,18 @@ input:focus { border-color: #2563eb; box-shadow: 0 0 5px rgba(37, 99, 235, 0.5);
     <input type="text" id="recipientId" placeholder="Recipient ID#" />
     <input type="number" id="sendAmount" placeholder="Amount (₱)" />
     <button onclick="sendMoney()">Send Money</button>
+    <button onclick="openBarcodeModal()">Show My Barcode</button>
   </div>
+
+<div id="barcodeModal" class="modal">
+  <div class="modal-content">
+    <h3>Your ID Barcode</h3>
+    <svg id="barcode"></svg>
+    <br>
+    <button class="confirm" onclick="downloadBarcode()">Download</button>
+    <button class="cancel" onclick="closeBarcodeModal()">Close</button>
+  </div>
+</div>
 
   <div class="dashboard-footer">
     <button onclick="openPassModal()">Change Password</button>
@@ -248,6 +260,61 @@ function confirmChangePassword() {
 window.onclick = function(event) {
   if (event.target === document.getElementById("passModal")) closePassModal();
 }
+
+function openBarcodeModal() {
+  const userId = document.getElementById("userId").innerText.replace("ID: ", "");
+  if (!userId) { alert("User ID not found!"); return; }
+
+  // Generate barcode
+  JsBarcode("#barcode", userId, {
+    format: "CODE128",
+    lineColor: "#2563eb",
+    width: 2,
+    height: 60,
+    displayValue: true
+  });
+
+  document.getElementById("barcodeModal").style.display = "block";
+}
+
+// Close barcode modal
+function closeBarcodeModal() {
+  document.getElementById("barcodeModal").style.display = "none";
+}
+
+// Download barcode as PNG
+function downloadBarcode() {
+  const svg = document.getElementById("barcode");
+  const serializer = new XMLSerializer();
+  const source = serializer.serializeToString(svg);
+  const img = new Image();
+  const svgBlob = new Blob([source], {type:"image/svg+xml;charset=utf-8"});
+  const url = URL.createObjectURL(svgBlob);
+
+  img.onload = function() {
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const png = canvas.toDataURL("image/png");
+
+    const link = document.createElement("a");
+    link.href = png;
+    link.download = "ID_Barcode.png";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
+
+// Close modal on click outside
+window.onclick = function(event) {
+  if (event.target === document.getElementById("barcodeModal")) closeBarcodeModal();
+}
+
+
+
 </script>
 
 </body>
